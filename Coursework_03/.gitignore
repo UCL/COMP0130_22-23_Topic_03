@@ -1,0 +1,45 @@
+# From https://github.com/github/gitignore/blob/main/C%2B%2B.gitignore
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# ORB-SLAM specific; this is a big file and github does not like it
+ORBvoc.txt
+
+# Annoying Mac files
+.DS_Store
+
+# Intermediate and build directories
+Build/*
+Develop/*
+Install/*

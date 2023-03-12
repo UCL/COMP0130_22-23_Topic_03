@@ -1,0 +1,16 @@
+    # this is heuristically generated, and may not be correct
+    find_package(Eigen3 CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Eigen3::Eigen)
+
+If you do not install the meta-port *opencv*, the package opencv4 is compatible with CMake
+if you set the OpenCV_DIR *before* the find_package call
+
+    set(OpenCV_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/share/opencv4")
+    find_package(OpenCV REQUIRED)
+
+suitesparse provides CMake targets:
+
+    # this is heuristically generated, and may not be correct
+    find_package(suitesparse CONFIG REQUIRED)
+    # note: 8 additional targets are not displayed.
+    target_link_libraries(main PRIVATE SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl)
