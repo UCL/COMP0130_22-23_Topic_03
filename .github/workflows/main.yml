@@ -28,7 +28,7 @@ jobs:
       run: sudo apt-get install cmake build-essential libeigen3-dev libboost-dev libopencv-dev libglew-dev libboost-filesystem-dev
       
     - name: Try compilation
-      working-directory: ${GITHUB_WORKSPACE}/Coursework_03
+      working-directory: ./Coursework_03
       run: |
          "./Build.sh"
          
@@ -52,6 +52,6 @@ jobs:
           brew link --overwrite opencv
           
       - name: Try compilation
-        working-directory: ${GITHUB_WORKSPACE}/Coursework_03
+        working-directory: ./Coursework_03
         run: |
           "./Build.sh"
