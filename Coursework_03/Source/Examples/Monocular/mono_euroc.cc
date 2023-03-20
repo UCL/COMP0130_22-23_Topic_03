@@ -23,6 +23,7 @@
 #include <fstream>
 #include <iostream>
 #include <opencv2/core/core.hpp>
+#include <sysexits.h>
 
 #include "System.h"
 
@@ -35,7 +36,7 @@ int main(int argc, char **argv) {
   if (argc != 4) {
     cerr << endl
           << "Usage: " << argv[0] << " settings_files path_to_image_folder path_to_times_file results_file" << endl;
-    return 1;
+    return EX_USAGE;
   }
 
   // Retrieve paths to images
@@ -47,7 +48,7 @@ int main(int argc, char **argv) {
 
   if (nImages <= 0) {
     cerr << "ERROR: Failed to load images" << endl;
-    return 1;
+    return EX_DATAERR;
   }
 
   // Create SLAM system. It initializes all system threads and gets ready to
@@ -76,7 +77,7 @@ int main(int argc, char **argv) {
       if (im.empty()) {
         cerr << endl
              << "Failed to load image at: " << vstrImageFilenames[ni] << endl;
-        main_error = 1;
+        main_error = EX_DATAERR;
         break;
       }
 
@@ -131,7 +132,7 @@ int main(int argc, char **argv) {
   // Save camera trajectory
   SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
 
-  return 0;
+  return EX_OK;
 }
 
 void LoadImages(const string &strImagePath, const string &strPathTimes,

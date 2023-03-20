@@ -43,3 +43,8 @@ ORBvoc.txt
 Build/*
 Develop/*
 Install/*
+
+# Data directories
+Data/KITTI/*
+Data/TUM/*
+Data/EuRoC/*

@@ -42,6 +42,8 @@ public:
                   cv::Mat &R21, cv::Mat &t21, std::vector<cv::Point3f> &vP3D,
                   std::vector<bool> &vbTriangulated);
 
+  ~Initializer();
+
 private:
   void FindHomography(std::vector<bool> &vbMatchesInliers, float &score,
                       cv::Mat &H21);

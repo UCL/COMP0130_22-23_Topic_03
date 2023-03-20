@@ -23,6 +23,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sysexits.h>
 
 #include <opencv2/core/core.hpp>
 
@@ -35,12 +36,10 @@ void LoadImages(const string &strPathLeft, const string &strPathRight,
                 vector<string> &vstrImageRight, vector<double> &vTimeStamps);
 
 int main(int argc, char **argv) {
-  if (argc != 5) {
+  if (argc != 4) {
     cerr << endl
-         << "Usage: ./stereo_euroc path_to_settings path_to_left_folder "
-            "path_to_right_folder path_to_times_file"
-         << endl;
-    return 1;
+          << "Usage: " << argv[0] << " settings_files path_to_image_folder path_to_times_file results_file" << endl;
+    return EX_USAGE;
   }
 
   // Retrieve paths to images
@@ -52,19 +51,19 @@ int main(int argc, char **argv) {
 
   if (vstrImageLeft.empty() || vstrImageRight.empty()) {
     cerr << "ERROR: No images in provided path." << endl;
-    return 1;
+    return EX_DATAERR;
   }
 
   if (vstrImageLeft.size() != vstrImageRight.size()) {
     cerr << "ERROR: Different number of left and right images." << endl;
-    return 1;
+    return EX_DATAERR;
   }
 
   // Read rectification parameters
   cv::FileStorage fsSettings(argv[1], cv::FileStorage::READ);
   if (!fsSettings.isOpened()) {
     cerr << "ERROR: Wrong path to settings" << endl;
-    return -1;
+    return EX_DATAERR;
   }
 
   cv::Mat K_l, K_r, P_l, P_r, R_l, R_r, D_l, D_r;
@@ -103,7 +102,8 @@ int main(int argc, char **argv) {
 
   // Create SLAM system. It initializes all system threads and gets ready to
   // process frames.
-  ORB_SLAM2::System SLAM(DEFAULT_BINARY_ORB_VOCABULARY, argv[1],
+  string settingsFile = string(DEFAULT_STEREO_SETTINGS_DIR) + string(argv[1]);
+  ORB_SLAM2::System SLAM(DEFAULT_BINARY_ORB_VOCABULARY, settingsFile,
                          ORB_SLAM2::System::STEREO, true);
 
   // Vector for tracking time statistics
@@ -114,57 +114,73 @@ int main(int argc, char **argv) {
   cout << "Start processing sequence ..." << endl;
   cout << "Images in the sequence: " << nImages << endl << endl;
 
-  // Main loop
-  cv::Mat imLeft, imRight, imLeftRect, imRightRect;
-  for (int ni = 0; ni < nImages; ni++) {
-    // Read left and right images from file
-    imLeft = cv::imread(vstrImageLeft[ni], cv::IMREAD_UNCHANGED);
-    imRight = cv::imread(vstrImageRight[ni], cv::IMREAD_UNCHANGED);
+    int main_error = 0;
+    std::thread runthread([&]() { // Start in new thread
+        // Main loop
+        cv::Mat imLeft, imRight, imLeftRect, imRightRect;
+        for (int ni = 0; ni < nImages; ni++) {
+          // Read left and right images from file
+          imLeft = cv::imread(vstrImageLeft[ni], cv::IMREAD_UNCHANGED);
+          imRight = cv::imread(vstrImageRight[ni], cv::IMREAD_UNCHANGED);
+          
+          if (imLeft.empty()) {
+            cerr << endl
+                 << "Failed to load image at: " << string(vstrImageLeft[ni]) << endl;
+            main_error = EX_DATAERR;
+            break;
+          }
+          
+          if (imRight.empty()) {
+            cerr << endl
+                 << "Failed to load image at: " << string(vstrImageRight[ni]) << endl;
+            main_error = EX_DATAERR;
+            break;
+          }
+          
+          if (SLAM.isFinished() == true) {
+            break;
+          }
 
-    if (imLeft.empty()) {
-      cerr << endl
-           << "Failed to load image at: " << string(vstrImageLeft[ni]) << endl;
-      return 1;
-    }
-
-    if (imRight.empty()) {
-      cerr << endl
-           << "Failed to load image at: " << string(vstrImageRight[ni]) << endl;
-      return 1;
-    }
-
-    cv::remap(imLeft, imLeftRect, M1l, M2l, cv::INTER_LINEAR);
-    cv::remap(imRight, imRightRect, M1r, M2r, cv::INTER_LINEAR);
-
-    double tframe = vTimeStamp[ni];
-
-    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-
-    // Pass the images to the SLAM system
-    SLAM.TrackStereo(imLeftRect, imRightRect, tframe);
-
-    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-
-    double ttrack =
-        std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1)
+          cv::remap(imLeft, imLeftRect, M1l, M2l, cv::INTER_LINEAR);
+          cv::remap(imRight, imRightRect, M1r, M2r, cv::INTER_LINEAR);
+          
+          double tframe = vTimeStamp[ni];
+          
+          chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+          
+          // Pass the images to the SLAM system
+          SLAM.TrackStereo(imLeftRect, imRightRect, tframe);
+          
+          chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+          
+          double ttrack =
+            std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1)
             .count();
+          
+          vTimesTrack[ni] = ttrack;
+          
+          // Wait to load the next frame
+          double T = 0;
+          if (ni < nImages - 1)
+            T = vTimeStamp[ni + 1] - tframe;
+          else if (ni > 0)
+            T = tframe - vTimeStamp[ni - 1];
+          
+          if (ttrack < T)
+            this_thread::sleep_for(chrono::duration<double>(T - ttrack));
+        }
+        SLAM.StopViewer();
+      });
 
-    vTimesTrack[ni] = ttrack;
 
-    // Wait to load the next frame
-    double T = 0;
-    if (ni < nImages - 1)
-      T = vTimeStamp[ni + 1] - tframe;
-    else if (ni > 0)
-      T = tframe - vTimeStamp[ni - 1];
+    cout << "Viewer started, waiting for thread." << endl;
+    runthread.join();
+    if (main_error != 0)
+      return main_error;
+    cout << "Tracking thread joined..." << endl;
 
-    if (ttrack < T)
-      this_thread::sleep_for(chrono::duration<double>(T - ttrack));
-    //            usleep((T-ttrack)*1e6);
-  }
-
-  // Stop all threads
-  SLAM.Shutdown();
+    // Stop all threads
+    SLAM.Shutdown();
 
   // Tracking time statistics
   sort(vTimesTrack.begin(), vTimesTrack.end());
@@ -179,7 +195,7 @@ int main(int argc, char **argv) {
   // Save camera trajectory
   SLAM.SaveTrajectoryTUM("CameraTrajectory.txt");
 
-  return 0;
+  return EX_OK;
 }
 
 void LoadImages(const string &strPathLeft, const string &strPathRight,

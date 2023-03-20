@@ -24,6 +24,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sysexits.h>
 
 #include <opencv2/core/core.hpp>
 
@@ -39,7 +40,7 @@ int main(int argc, char **argv) {
   if (argc != 4) {
     cerr << endl
           << "Usage: " << argv[0] << " settings_files path_to_sequence results_file" << endl;
-    return 1;
+    return EX_USAGE;
   }
 
   // Retrieve paths to images
@@ -75,7 +76,7 @@ int main(int argc, char **argv) {
       if (im.empty()) {
         cerr << endl
              << "Failed to load image at: " << vstrImageFilenames[ni] << endl;
-        main_error = 1;
+        main_error = EX_DATAERR;
         break;
       }
 
@@ -130,8 +131,9 @@ int main(int argc, char **argv) {
 
   // Save camera trajectory
   // SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+
   SLAM.SaveTrajectoryTUM(string(argv[3]));
-  return 0;
+  return EX_OK;
 }
 
 void LoadImages(const string &strPathToSequence,

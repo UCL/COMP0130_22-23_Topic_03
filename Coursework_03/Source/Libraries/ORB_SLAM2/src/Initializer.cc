@@ -25,11 +25,59 @@
 #include "ORBmatcher.h"
 #include "Optimizer.h"
 
+#include <chrono>
+#include <fstream>
+#include <iomanip> // put_time
+#include <sstream> // stringstream
 #include <thread>
 
 using namespace ::std;
 
 namespace ORB_SLAM2 {
+
+class InitializerLogger {
+
+public:
+  InitializerLogger() { _started = false; }
+
+  ~InitializerLogger() { cout << "~InitializerLogger" << endl; }
+
+  void log(const string &line) {
+    if (_started == false) {
+      cout << "InitializerLogger" << endl;
+
+      _totalNumberOfFramesProcessed = 0;
+
+      // Create the filename based on date / time. This ensures uniqueness
+      // From
+      // https://stackoverflow.com/questions/62569992/adding-a-timestamp-to-filenames-in-c#
+      auto now = chrono::system_clock::to_time_t(chrono::system_clock::now());
+      stringstream datetime;
+      datetime << put_time(localtime(&now), "%Y%m%d-%H%M%S.txt");
+      _filename = datetime.str();
+
+      _logFile.open(_filename);
+      _started = true;
+    }
+
+    _logFile << _totalNumberOfFramesProcessed << "," << line << "\n";
+    _totalNumberOfFramesProcessed++;
+  }
+
+private:
+  // Flag to show if started
+  bool _started;
+
+  // Total number of frames processed
+  string _filename;
+
+  int _totalNumberOfFramesProcessed;
+
+  // The log file
+  ofstream _logFile;
+};
+
+static InitializerLogger logger;
 
 Initializer::Initializer(const Frame &ReferenceFrame, float sigma,
                          int iterations) {
@@ -46,6 +94,7 @@ bool Initializer::Initialize(const Frame &CurrentFrame,
                              const vector<int> &vMatches12, cv::Mat &R21,
                              cv::Mat &t21, vector<cv::Point3f> &vP3D,
                              vector<bool> &vbTriangulated) {
+
   // Fill structures with current keypoints and matches with reference frame
   // Reference Frame: 1, Current Frame: 2
   mvKeys2 = CurrentFrame.mvKeysUn;
@@ -111,15 +160,24 @@ bool Initializer::Initialize(const Frame &CurrentFrame,
 
   // Try to reconstruct from homography or fundamental depending on the ratio
   // (0.40-0.45)
+  bool success = false;
   if (RH > 0.40)
-    return ReconstructH(vbMatchesInliersH, H, mK, R21, t21, vP3D,
-                        vbTriangulated, 1.0, 50);
+    success = ReconstructH(vbMatchesInliersH, H, mK, R21, t21, vP3D,
+                           vbTriangulated, 1.0, 50);
   else // if(pF_HF>0.6)
-    return ReconstructF(vbMatchesInliersF, F, mK, R21, t21, vP3D,
-                        vbTriangulated, 1.0, 50);
+    success = ReconstructF(vbMatchesInliersF, F, mK, R21, t21, vP3D,
+                           vbTriangulated, 1.0, 50);
 
-  return false;
+  // Q2b
+  // This shows an example of how to log data; modify
+  stringstream result;
+  result << N;
+  logger.log(result.str());
+
+  return success;
 }
+
+Initializer::~Initializer() { cout << "Initializer::~Initializer" << endl; }
 
 void Initializer::FindHomography(vector<bool> &vbMatchesInliers, float &score,
                                  cv::Mat &H21) {
