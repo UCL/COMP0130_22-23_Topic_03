@@ -1,5 +1,8 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${DBoW2_INCLUDE_DIR} ${DLib_INCLUDE_DIR})
 
+message(DBoW2_INCLUDE_DIR=${DBoW2_INCLUDE_DIR})
+message(DLib_INCLUDE_DIR=${DLib_INCLUDE_DIR})
+
 # For debugging strip the full path from https://stackoverflow.com/questions/8487986/file-macro-shows-full-path
 # Note this will not work in Visual studio-type developer environments.
 
@@ -57,5 +60,7 @@ Boost::filesystem
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${DBoW2_INCLUDE_DIR}>
+    $<BUILD_INTERFACE:${DLib_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:include>
 )
