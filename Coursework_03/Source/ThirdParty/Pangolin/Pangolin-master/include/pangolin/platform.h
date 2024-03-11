@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include <pangolin/config.h>
 
 // Include portable printf-style format macros
