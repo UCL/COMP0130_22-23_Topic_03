@@ -25,7 +25,11 @@ jobs:
       run: sudo apt-get update
       
     - name: Install dependecies
-      run: sudo apt-get install cmake build-essential libeigen3-dev libboost-dev libopencv-dev libglew-dev libboost-filesystem-dev
+      # run: sudo apt-get install cmake build-essential libeigen3-dev libboost-dev libopencv-dev libglew-dev libboost-filesystem-dev
+      working-directory: ./Coursework_03
+      run: |
+         "./Scripts/install_ubuntu_dependencies.sh"
+      
       
     - name: Try compilation
       working-directory: ./Coursework_03
@@ -43,9 +47,14 @@ jobs:
       - name: Install GitHub CLI
         run: |
           brew update
-      - name: Install dependencies
+      # - name: Install dependencies
+      #   run: |
+      #     brew install cmake glew pkgconfig freeglut opencv boost eigen suitesparse 
+      
+      - name: Install dependecies
+        working-directory: ./Coursework_03
         run: |
-          brew install cmake glew pkgconfig freeglut opencv boost eigen suitesparse 
+           "./Scripts/install_mac_dependencies.sh"
 
       - name: link opencv
         run: |
